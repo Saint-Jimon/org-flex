@@ -105,7 +105,8 @@ test("a task block needs filepath: and defaults its query", () => {
   expect(() => taskBlockConfig(null)).toThrow("filepath: is required");
 });
 
-test("the agenda reads the top-level org files and shows the week: overdue, then each day with times first", () => {
+test("the agenda reads the configured agenda files and shows the week: overdue, then each day with times first", () => {
+  expect(agendaFiles(["roam/todo.org", "notes/x.org", "people.org", "roam/daily/2026-10-29.org"], ["roam/todo.org"])).toEqual(["roam/todo.org"]);
   expect(agendaFiles(["tasks.org", "notes/x.org", "people.org", "README.md", "Inbox.ORG"])).toEqual(["Inbox.ORG", "people.org", "tasks.org"]);
   const kw2 = { todo: ["TODO", "IN-PROGRESS", "WAITING"], done: ["DONE", "CANCELLED"] };
   const thu = new Date(2026, 9, 29, 9, 0);

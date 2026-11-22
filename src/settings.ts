@@ -39,12 +39,12 @@ export const BUTTONS: ButtonDef[] = [
   { id: "wiki-link", name: "Insert wiki link", icon: "link", enabled: true, refocus: true },
   { id: "node-find", name: "Go to node", icon: "search", enabled: true, refocus: false },
   { id: "heading-id", name: "Assign ID to heading", icon: "fingerprint", enabled: true, refocus: true },
-  { id: "journal", name: "Open today's journal", icon: "calendar-days", enabled: false, refocus: false },
+  { id: "journal", name: "Open today's journal", icon: "calendar-days", enabled: true, refocus: false },
   { id: "journal-picker", name: "Browse journal entries", icon: "book-open", enabled: false, refocus: false },
   { id: "journal-calendar", name: "Journal calendar", icon: "calendar", enabled: false, refocus: false },
   { id: "new-note", name: "New org note", icon: "file-plus", enabled: false, refocus: false },
-  { id: "capture", name: "Capture to inbox", icon: "inbox", enabled: false, refocus: false },
-  { id: "attach", name: "Attach file", icon: "paperclip", enabled: false, refocus: false },
+  { id: "capture", name: "Capture to inbox", icon: "inbox", enabled: true, refocus: false },
+  { id: "attach", name: "Attach file", icon: "paperclip", enabled: true, refocus: false },
   { id: "record", name: "Record voice note", icon: "mic", enabled: false, refocus: false },
   { id: "agenda", name: "Open agenda", icon: "calendar-range", enabled: false, refocus: false },
   { id: "timeline", name: "Open timeline", icon: "history", enabled: false, refocus: false },
@@ -104,17 +104,19 @@ export interface OrgFlexSettings {
   shortcutBarVersion: number;
   journalFolder: string;
   captureFile: string;
+  attachmentFolder: string;
 }
 
-export const BAR_VERSION = 10;
+export const BAR_VERSION = 11;
 
 export const DEFAULT_SETTINGS: OrgFlexSettings = {
   showShortcutBar: true,
   shortcutBarButtons: BUTTONS.filter((b) => b.enabled).map((b) => b.id),
   shortcutCustomIcons: {},
   shortcutBarVersion: BAR_VERSION,
-  journalFolder: "journal",
-  captureFile: "inbox.org",
+  journalFolder: "roam/daily",
+  captureFile: "roam/todo.org",
+  attachmentFolder: "attachments/images",
 };
 
 /** §12: saved keys that are no longer settings (gone, or moved to the flavour, §12a); dropped on load. */
@@ -154,5 +156,6 @@ export function migrateShortcutButtons(buttons: string[], version: number): { bu
   if (version < 9) list = BUTTONS.map((b) => b.id as string).filter((id) => list.includes(id));
   // from version 9 the order is the user's: a new button goes at the end, as turning one on does (BAR-10)
   if (version < 10 && !list.includes("table")) list.push("table");
+  if (version < 11) for (const id of ["journal", "capture", "attach"]) if (!list.includes(id)) list.push(id);
   return { buttons: list, changed: true };
 }

@@ -3,7 +3,7 @@
 import { Notice, type App } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import type { OrgFlexView } from "../view";
-import { insertFileLinks, pastedFiles, pastedImageExtension, recordingExtension, type MediaKind } from "../org/edit";
+import { availablePathIn, insertFileLinks, pastedFiles, pastedImageExtension, recordingExtension, type MediaKind } from "../org/edit";
 import { FLAVOUR } from "../flavour";
 import { relativeLinkPath } from "../org/syntax";
 import { denoteFileName } from "../org/denote";
@@ -76,21 +76,22 @@ function mediaName(app: App, media: MediaToName): string {
 }
 
 /**
- * ATT-3: each file saved where Obsidian puts attachments for this note, then
- * linked at the cursor: a relative `file:` link, or `denote:ID` with Denote (DEN-8).
+ * ATT-3: each file saved into the `attachmentFolder` setting (the org-download
+ * folder at the vault root), numbered when its name is taken, then linked at
+ * the cursor: a relative `file:` link, or `denote:ID` with Denote (DEN-8).
  */
 async function saveAttachments(view: OrgFlexView, files: { name: string | MediaToName; data: Promise<ArrayBuffer> }[]) {
   const { app } = view;
   const note = view.file;
   if (!note) return;
+  const folder = view.plugin.settings.attachmentFolder;
   const targets: string[] = [];
   for (const f of files) {
     try {
       // named one at a time, so a second paste counts the first
       const saved = savedName(view, typeof f.name === "string" ? f.name : mediaName(app, f.name));
-      const path = await app.fileManager.getAvailablePathForAttachment(saved.name, note.path);
-      const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
-      if (parent && !app.vault.getAbstractFileByPath(parent)) await app.vault.createFolder(parent);
+      const path = availablePathIn(folder, saved.name, (p) => app.vault.getAbstractFileByPath(p) !== null);
+      if (folder.replace(/^\/+|\/+$/g, "")) await view.plugin.ensureFolder(folder);
       const file = await app.vault.createBinary(path, await f.data);
       targets.push(saved.id !== null ? `denote:${saved.id}` : `file:${relativeLinkPath(note.path, file.path)}`);
     } catch (e) {

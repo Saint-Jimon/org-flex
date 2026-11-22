@@ -7,9 +7,10 @@
 
 import type { VisibilityLevel } from "./org/folding";
 import { DEFAULT_JOURNAL_TEMPLATE } from "./org/journal";
-import { timestampId } from "./org/denote";
+import { compactStampId, timestampId } from "./org/denote";
 import { uuidId } from "./org/ids";
 import { stampedMediaName, type MediaKind } from "./org/edit";
+import { slugTitle } from "./org/new-note";
 import type { LinkScheme } from "./org/vault-index";
 
 export interface Flavour {
@@ -39,8 +40,16 @@ export interface Flavour {
   journalId(date: Date, taken: ReadonlySet<string>): string;
   /** ATT-6: the name for a recording or pasted image made at `date`; `taken` is the names of the vault's files */
   mediaName(kind: MediaKind, date: Date, ext: string, taken: ReadonlySet<string>): string;
-  /** ACT-15: a task marked done gets `CLOSED: [time]`, as Emacs's `org-log-done 'time` */
-  logDone: boolean;
+  /** ACT-15: a task marked done gets `CLOSED: [time]`; with `"note"`, also a `:LOGBOOK:` `- CLOSING NOTE [time]` (`org-log-done 'note`) */
+  logDone: boolean | "note";
+  /** NOTE-2, LP-10, FIND-3: new notes go to this folder (org-roam's `org-roam-directory`) */
+  noteFolder: string;
+  /** NOTE-3: the file name (without `.org`) of a new note titled `title`, made at `date` */
+  noteName(title: string, date: Date): string;
+  /** CAP-3: captures are filed at the end of this heading's subtree in the capture file (`file+olp`) */
+  captureHeading: string;
+  /** AG-1: the files the agenda reads (the fork's `org-agenda-files`) */
+  agendaFiles: string[];
 }
 
 export const FLAVOUR: Flavour = {
@@ -50,12 +59,16 @@ export const FLAVOUR: Flavour = {
   hideStars: false,
   hideEmphasisMarkers: false,
   foldPropertyDrawers: true,
-  defaultFoldLevel: "foldall",
+  defaultFoldLevel: "expandall",
   journalTemplate: DEFAULT_JOURNAL_TEMPLATE,
   orgId: uuidId,
   links: "id",
   denoteId: timestampId,
   journalId: timestampId,
   mediaName: stampedMediaName,
-  logDone: false,
+  logDone: "note",
+  noteFolder: "roam",
+  noteName: (title, date) => `${slugTitle(title)}-${compactStampId(date)}`,
+  captureHeading: "Tasks",
+  agendaFiles: ["roam/todo.org"],
 };

@@ -44,7 +44,7 @@ async function fileCapture(plugin: OrgFlexPlugin, path: string, choice: CaptureC
     let done = false;
     plugin.forEachView((v) => { if (!done && v.file?.path === path) done = v.appendEntry(entry); });
     if (!done) await app.vault.process(file, (data) => {
-      const { from, insert } = appendEntry(data, entry);
+      const { from, insert } = appendEntry(data, FLAVOUR.captureHeading, entry);
       return data.slice(0, from) + insert;
     });
     new Notice(`Captured to ${path}`);

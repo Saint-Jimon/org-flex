@@ -65,9 +65,43 @@ export function noteCaptureText(note: NoteRecord, scheme: LinkScheme = "id"): st
   return `\n${link}`;
 }
 
-/** CAP-3: where and what to insert so `entry` starts on a line of its own at the end of `doc`. */
-export function appendEntry(doc: string, entry: string): { from: number; insert: string } {
-  return { from: doc.length, insert: doc && !doc.endsWith("\n") ? `\n${entry}` : entry };
+const HEADING_RE = /^\*+\s+(.*?)\s*$/;
+
+/**
+ * CAP-3: where and what to insert so `entry` starts on a line of its own at
+ * the end of the level-1 heading titled `heading`'s subtree (as org-roam's
+ * `file+olp` target does); the heading is created at the end of `doc` when
+ * missing.
+ */
+export function appendEntry(doc: string, heading: string, entry: string): { from: number; insert: string } {
+  const starts: number[] = [];
+  const texts: string[] = [];
+  let pos = 0;
+  for (const t of doc.split("\n")) {
+    starts.push(pos);
+    texts.push(t);
+    pos += t.length + 1;
+  }
+  let headAt = -1;
+  for (let i = 0; i < texts.length; i++) {
+    const m = HEADING_RE.exec(texts[i]);
+    if (m && texts[i][0] === "*" && texts[i][1] !== "*" && m[1] === heading) {
+      headAt = i;
+      break;
+    }
+  }
+  if (headAt < 0) {
+    return { from: doc.length, insert: `${doc && !doc.endsWith("\n") ? "\n" : ""}* ${heading}\n\n${entry}` };
+  }
+  let end = texts.length;
+  for (let j = headAt + 1; j < texts.length; j++) {
+    if (texts[j].startsWith("* ") || texts[j] === "*") {
+      end = j;
+      break;
+    }
+  }
+  const at = end >= texts.length ? doc.length : starts[end];
+  return { from: at, insert: `${at > 0 && !doc.slice(0, at).endsWith("\n") ? "\n" : ""}${entry}` };
 }
 
 const URL_RE = /^[a-z][a-z0-9+.-]*:\/\/\S+$/i;

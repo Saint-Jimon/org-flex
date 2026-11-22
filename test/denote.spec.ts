@@ -120,13 +120,13 @@ describe("Denote", () => {
   test("Denote notes and journal days are named by identifier, and days found by date", () => {
     expect(notePath("notes", " Trip to Goa ", "2610a")).toBe("notes/@@2610a--trip-to-goa.org");
     const d = new Date(2026, 9, 3, 8, 30);
-    expect(journalPathForDate("journal", d, "261003")).toBe("journal/2026/10/@@261003--2026-10-03__journal.org");
+    expect(journalPathForDate("journal", d, "261003")).toBe("journal/@@261003--2026-10-03__journal.org");
     expect(denoteJournalContent(d, "261003", d)).toBe(
       "#+title:      2026-10-03\n#+date:       [2026-10-03 Sat 08:30]\n#+filetags:   :journal:\n#+identifier: 261003\n\n");
-    expect(journalEntries(["journal/2026/10/@@261003--2026-10-03__journal.org", "journal/2026/10/2026-10-02.org", "notes/2610a--x.org"], "journal"))
+    expect(journalEntries(["journal/@@261003--2026-10-03__journal.org", "journal/2026-10-02.org", "notes/2610a--x.org"], "journal"))
       .toEqual([
-        { path: "journal/2026/10/@@261003--2026-10-03__journal.org", date: "2026-10-03" },
-        { path: "journal/2026/10/2026-10-02.org", date: "2026-10-02" },
+        { path: "journal/@@261003--2026-10-03__journal.org", date: "2026-10-03" },
+        { path: "journal/2026-10-02.org", date: "2026-10-02" },
       ]);
   });
 

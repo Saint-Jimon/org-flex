@@ -118,6 +118,11 @@ export function timestampId(date: Date, taken: ReadonlySet<string>): string {
   }
 }
 
+/** NOTE-3: the compact local-time stamp `YYYYMMDDHHMMSS` of the org-roam `${slug}-%<%Y%m%d%H%M%S>` capture template. */
+export function compactStampId(date: Date): string {
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
 /** DEN-2: every file with a Denote identifier, by identifier; when two share one, the first path in order wins. */
 export class DenoteFiles {
   private byId = new Map<string, string[]>();

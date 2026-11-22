@@ -2,6 +2,7 @@
 
 import { TFolder } from "obsidian";
 import type OrgFlexPlugin from "../main";
+import { FLAVOUR } from "../flavour";
 import { titleProblem } from "../org/new-note";
 import { NewNoteModal } from "../ui/modals";
 import type { Feature } from "./feature";
@@ -9,9 +10,7 @@ import type { Feature } from "./feature";
 /** NOTE-1, NOTE-2 */
 function newNote(plugin: OrgFlexPlugin, folder?: TFolder) {
   const { app } = plugin;
-  const active = app.workspace.getActiveFile();
-  const parent = folder ?? app.fileManager.getNewFileParent(active?.path ?? "");
-  const dir = parent.isRoot() ? "" : parent.path;
+  const dir = folder ? (folder.isRoot() ? "" : folder.path) : FLAVOUR.noteFolder;
   new NewNoteModal(app, dir, (title) => createNote(plugin, dir, title)).open();
 }
 
