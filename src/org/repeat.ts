@@ -127,8 +127,8 @@ function removeEntry(lines: Line[], p: number, entry: { from: number; to: number
 
 export interface TaskLog {
   now: Date;
-  /** ACT-15: write `CLOSED:` when a task is done (`org-log-done 'time`) */
-  logDone: boolean;
+  /** ACT-15: write `CLOSED:` when a task is done (`org-log-done 'time`); `"note"` also logs `- CLOSING NOTE [time]` in a `:LOGBOOK:` drawer (`org-log-done 'note`) */
+  logDone: boolean | "note";
 }
 
 /**
@@ -138,7 +138,9 @@ export interface TaskLog {
  *   open: the repeating dates move on, `:LAST_REPEAT:` is set and a
  *   `- State "DONE" from "TODO" [time]` line is added under the heading;
  * - otherwise, with `logDone`, becoming done writes `CLOSED: [time]` first on
- *   the planning line; leaving the done keywords removes `CLOSED:`.
+ *   the planning line, and with `logDone "note"` a `:LOGBOOK:` drawer with
+ *   `- CLOSING NOTE [time]`; leaving the done keywords removes `CLOSED:` (the
+ *   logbook entry stays, as Emacs keeps the log).
  * Empty when the line is no heading.
  */
 export function taskStateEdits(text: string, n: number, next: string | null, keywords: Keywords, log: TaskLog): TextEdit[] {
@@ -221,14 +223,28 @@ export function taskStateEdits(text: string, n: number, next: string | null, key
   const edits = keywordEdit(next);
   const closed = entries.find((e) => e.kind === "CLOSED");
   if (!wasDone && willDone && log.logDone) {
-    const entry = `CLOSED: ${inactiveNow(log.now)}`;
+    const stamp = inactiveNow(log.now);
+    const entry = `CLOSED: ${stamp}`;
+    // ACT-15 with logDone "note": `- CLOSING NOTE [time]` at the top of the :LOGBOOK: drawer after the planning line
+    const logbookEdit = (): TextEdit[] => {
+      if (log.logDone !== "note") return [];
+      const note = `- CLOSING NOTE ${stamp}`;
+      const after = p! + 1;
+      if (lines[after] && /^[ \t]*:LOGBOOK:[ \t]*$/i.test(lines[after].text)) {
+        return [{ from: lines[after].to, to: lines[after].to, insert: `\n${note}` }];
+      }
+      return [{ from: lines[p!].to, to: lines[p!].to, insert: `\n:LOGBOOK:\n${note}\n:END:` }];
+    };
     if (closed) {
-      edits.push({ from: lines[p!].from + closed.stampFrom, to: lines[p!].from + closed.to, insert: inactiveNow(log.now) });
+      edits.push({ from: lines[p!].from + closed.stampFrom, to: lines[p!].from + closed.to, insert: stamp });
+      edits.push(...logbookEdit());
     } else if (p !== null) {
       const indent = /^[ \t]*/.exec(lines[p].text)![0].length;
       edits.push({ from: lines[p].from + indent, to: lines[p].from + indent, insert: `${entry} ` });
+      edits.push(...logbookEdit());
     } else {
-      edits.push({ from: heading.to, to: heading.to, insert: `\n${entry}` });
+      const drawer = log.logDone === "note" ? `\n:LOGBOOK:\n- CLOSING NOTE ${stamp}\n:END:` : "";
+      edits.push({ from: heading.to, to: heading.to, insert: `\n${entry}${drawer}` });
     }
   } else if (wasDone && !willDone && closed) {
     edits.push(removeEntry(lines, p!, closed));

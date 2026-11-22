@@ -481,3 +481,10 @@ export function relativeLinkPath(notePath: string, filePath: string): string {
   while (common < from.length && common < to.length - 1 && from[common] === to[common]) common++;
   return [...from.slice(common).map(() => ".."), ...to.slice(common)].join("/");
 }
+
+/** NOTE-5: the folder `folder` as seen from the folder of the file `notePath`, with a trailing slash. */
+export function relativeFolderPath(notePath: string, folder: string): string {
+  const dir = folder.replace(/^\/+|\/+$/g, "");
+  if (!dir) return "./";
+  return `${relativeLinkPath(notePath, `${dir}/.`).replace(/\/\.$/, "")}/`;
+}

@@ -1,8 +1,9 @@
-// New org notes (§10a): the title is the file name and the #+title; the
-// :ID: is a fresh UUID, as org-roam makes it. With Denote (DEN-5) the file is
+// New org notes (§10a): the file is named `<slug>-<YYYYMMDDHHMMSS>.org`, as the
+// org-roam `${slug}-%<%Y%m%d%H%M%S>.org` capture template does, with the title
+// as the #+title and a fresh UUID as the :ID:. With Denote (DEN-5) the file is
 // named ID--title.org and starts with Denote's front matter.
 
-import { denoteFileName } from "./denote";
+import { compactStampId, denoteFileName } from "./denote";
 
 const FORBIDDEN = /[\\/:*?"<>|#^\[\]]/;
 
@@ -23,10 +24,31 @@ export function notePath(folder: string, raw: string, denoteId?: string): string
   return dir ? `${dir}/${name}` : name;
 }
 
-/** NOTE-5: the journal header without filetags, with `id` (a UUID) as the :ID:. */
-export function noteFileContent(raw: string, id: string): string {
+/** NOTE-3: org-roam's `${slug}`: the lowercased title, runs of non-alphanumerics as `-`. */
+export function slugTitle(raw: string): string {
+  const slug = raw.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || "untitled";
+}
+
+/**
+ * NOTE-3: `<folder>/<slug>-<YYYYMMDDHHMMSS>.org` for a title made at `date`,
+ * with ` 2`, ` 3`, … added when `taken` says the path exists.
+ */
+export function stampedNotePath(folder: string, raw: string, date: Date, taken?: (path: string) => boolean): string {
+  const dir = folder.replace(/^\/+|\/+$/g, "");
+  const base = `${slugTitle(raw)}-${compactStampId(date)}`;
+  for (let n = 1; ; n++) {
+    const name = n === 1 ? base : `${base} ${n}`;
+    const path = dir ? `${dir}/${name}.org` : `${name}.org`;
+    if (!taken || !taken(path)) return path;
+  }
+}
+
+/** NOTE-5: a new note's header: the file-local `org-download-image-dir` line (when `imageDir`), the :ID:, the #+title. */
+export function noteFileContent(raw: string, id: string, imageDir?: string): string {
   const title = raw.trim();
-  return `:PROPERTIES:\n:ID:       ${id}\n:END:\n#+title: ${title}\n\n`;
+  const local = imageDir ? `# -*- org-download-image-dir: "${imageDir}" -*-\n` : "";
+  return `${local}:PROPERTIES:\n:ID:       ${id}\n:END:\n#+title: ${title}\n\n`;
 }
 
 /**

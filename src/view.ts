@@ -280,11 +280,11 @@ export class OrgFlexView extends TextFileView {
     if (this.editor && !zoomToHeadingAt(this.editor, pos)) this.revealPosition(pos, { top: true });
   }
 
-  /** CAP-3: add a captured entry at the end, as one undoable edit, even in reading mode. False with no editor. */
+  /** CAP-3: add a captured entry at the end of the capture heading's subtree, as one undoable edit, even in reading mode. False with no editor. */
   appendEntry(entry: string): boolean {
     const editor = this.editor;
     if (!editor) return false;
-    editor.dispatch({ changes: appendEntry(editor.state.doc.toString(), entry), userEvent: "input.capture", annotations: allowInReading.of(true) });
+    editor.dispatch({ changes: appendEntry(editor.state.doc.toString(), FLAVOUR.captureHeading, entry), userEvent: "input.capture", annotations: allowInReading.of(true) });
     return true;
   }
 

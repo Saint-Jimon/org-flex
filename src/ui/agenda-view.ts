@@ -35,7 +35,7 @@ export class AgendaView extends ItemView {
   async onOpen() {
     const vault = this.app.vault;
     const changed = (file: { path: string }) => {
-      if (agendaFiles([file.path]).length) this.refreshSoon();
+      if (agendaFiles([file.path], FLAVOUR.agendaFiles).length) this.refreshSoon();
     };
     this.registerEvent(vault.on("modify", changed));
     this.registerEvent(vault.on("create", changed));
@@ -62,7 +62,7 @@ export class AgendaView extends ItemView {
   async render() {
     const keywords = this.plugin.keywords();
     const vault = this.app.vault;
-    const files = agendaFiles(vault.getFiles().map((f) => f.path));
+    const files = agendaFiles(vault.getFiles().map((f) => f.path), FLAVOUR.agendaFiles);
     const tasks: OrgTask[] = [];
     for (const path of files) {
       const file = vault.getAbstractFileByPath(path);

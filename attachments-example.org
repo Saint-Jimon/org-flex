@@ -1,0 +1,19 @@
+# -*- org-download-image-dir: "../attachments/images/" -*-
+:PROPERTIES:
+:ID:       0ecdf441-6192-4753-89b2-d5aec86d03e5
+:END:
+#+title: Bio-Informatica
+#+filetags: :bio-informatica:learning:
+
+Main bio-informatics node to which all other things can link.
+[[id:ced63988-0457-46ca-b7c9-25b1218d50b7][Introduction-to-Genetic-Analysis]]
+
+[[file:../attachments/images/Bio-Informatica-mKMqoQTfYl-image.png]]
+
+
+test image of het gerenderd wordt
+verdere aanpassing
+
+[[file:../attachments/images/Bio-Informatica-mKMqoQTfYl-image.png]]
+
+[[file:../attachments/images/Bio-Informatica-ZSD1cHgoXz-image.png]]

@@ -3,7 +3,7 @@ import { EditorSelection, EditorState, TransactionSpec } from "@codemirror/state
 import { history, undo } from "@codemirror/commands";
 import { codeFolding, foldEffect } from "@codemirror/language";
 import {
-  assignId, continueList, toggleKeyword, insertBlock, insertHeading, cycleTaskState, decreaseHeadingLevel, increaseHeadingLevel, insertIdLink, insertWikiLink, insertFileLinks, recordingName, recordingExtension, recorderType, RECORDING_AUDIO, RECORDING_BITRATE, pastedFiles, pastedName, countedMediaName, stampedMediaName,
+  assignId, continueList, toggleKeyword, insertBlock, insertHeading, cycleTaskState, decreaseHeadingLevel, increaseHeadingLevel, insertIdLink, insertWikiLink, insertFileLinks, availablePathIn, recordingName, recordingExtension, recorderType, RECORDING_AUDIO, RECORDING_BITRATE, pastedFiles, pastedName, countedMediaName, stampedMediaName,
   orgDateString, setPlanningDate, toggleBoxOnLine, toggleCheckbox, toggleLeadingStars, currentPlanningDate,
 } from "../src/org/edit";
 import { dropSlots, itemExtent, listDepths, moveItem, parseItem } from "../src/org/lists";
@@ -469,6 +469,15 @@ test("tapping a keyword in reading mode toggles open and done, never to none", (
 });
 
 describe("attachments", () => {
+  test("availablePathIn numbers a taken name in the attachment folder", () => {
+    const taken = new Set(["attachments/images/a.jpg", "attachments/images/a 2.jpg", "attachments/images/b.png"]);
+    expect(availablePathIn("attachments/images", "a.jpg", (p) => taken.has(p))).toBe("attachments/images/a 3.jpg");
+    expect(availablePathIn("/attachments/images/", "b.png", (p) => taken.has(p))).toBe("attachments/images/b 2.png");
+    expect(availablePathIn("attachments/images", "c.png", () => false)).toBe("attachments/images/c.png");
+    expect(availablePathIn("", "a.jpg", (p) => new Set(["a.jpg", "a 2.jpg"]).has(p))).toBe("a 3.jpg");
+    expect(availablePathIn("attachments/images", "noext", () => false)).toBe("attachments/images/noext");
+  });
+
   test("insertFileLinks puts file links at the cursor, spaced from a word, cursor after", () => {
     let s0 = at("see|");
     let s = apply(s0, insertFileLinks(s0, ["file:a.jpg", "file:../m/b c.m4a"])!);

@@ -585,6 +585,21 @@ export function insertFileLinks(state: EditorState, targets: string[]): Transact
   return { changes: { from, to, insert }, selection: EditorSelection.cursor(from + insert.length), userEvent: "input" };
 }
 
+/**
+ * ATT-3: `<folder>/<name>`, or `<folder>/<name> 2<ext>`, `<folder>/<name> 3<ext>`, …
+ * while `taken` says the path exists, so nothing is overwritten.
+ */
+export function availablePathIn(folder: string, name: string, taken: (path: string) => boolean): string {
+  const dir = folder.replace(/^\/+|\/+$/g, "");
+  const dot = name.lastIndexOf(".");
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : "";
+  for (let n = 1; ; n++) {
+    const path = dir ? `${dir}/${n === 1 ? stem : `${stem} ${n}`}${ext}` : `${n === 1 ? stem : `${stem} ${n}`}${ext}`;
+    if (!taken(path)) return path;
+  }
+}
+
 /** What a new file the plugin names is: a voice recording (ATT-4) or an image pasted from the clipboard (ATT-5). */
 export type MediaKind = "recording" | "image";
 

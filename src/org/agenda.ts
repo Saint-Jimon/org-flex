@@ -7,8 +7,13 @@ export const AGENDA_QUERY = ".it.done";
 /** AG-2: today and the six days after it. */
 export const AGENDA_DAYS = 7;
 
-/** AG-1: the `.org` files at the vault's top level, as `org-agenda-files` set to `org-directory`'s `*.org`; sorted. */
-export function agendaFiles(paths: string[]): string[] {
+/**
+ * AG-1: the files the agenda reads: the flavour's `agendaFiles` (the fork's
+ * `org-agenda-files`) that exist in the vault, in the order listed; without a
+ * flavour list, the `.org` files at the vault's top level, sorted.
+ */
+export function agendaFiles(paths: string[], configured?: string[]): string[] {
+  if (configured) return configured.filter((p) => paths.includes(p));
   return paths.filter((p) => !p.includes("/") && p.toLowerCase().endsWith(".org")).sort();
 }
 

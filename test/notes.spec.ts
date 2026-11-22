@@ -10,7 +10,7 @@ import {
 } from "../src/org/journal";
 import { readNote } from "../src/org/vault-index";
 import { addDays, appendEntry, captureEntry, capturePath, captureStates, dateFieldValue, noteCaptureText, parseDateField, sharedCaptureText } from "../src/org/capture";
-import { freeNotePath, noteFileName, notePath, noteFileContent, titleProblem } from "../src/org/new-note";
+import { freeNotePath, noteFileName, notePath, noteFileContent, stampedNotePath, titleProblem } from "../src/org/new-note";
 import {
   barButtons, BUTTONS, buttonIconName, mergeSettings, migrateShortcutButtons, moveButton, toggleButton, DEFAULT_SETTINGS,
 } from "../src/settings";
@@ -106,22 +106,29 @@ describe("journal", () => {
     expect(journalDateString(d)).toBe("2024-03-05");
   });
 
-  test("journalPathForDate nests by year and month, tolerating slashes and an empty folder", () => {
-    expect(journalPathForDate("journal", d)).toBe("journal/2024/03/2024-03-05.org");
-    expect(journalPathForDate("/a/b/", d)).toBe("a/b/2024/03/2024-03-05.org");
-    expect(journalPathForDate("", d)).toBe("2024/03/2024-03-05.org");
+  test("journalPathForDate puts the day file flat in the folder, tolerating slashes and an empty folder", () => {
+    expect(journalPathForDate("journal", d)).toBe("journal/2024-03-05.org");
+    expect(journalPathForDate("/a/b/", d)).toBe("a/b/2024-03-05.org");
+    expect(journalPathForDate("", d)).toBe("2024-03-05.org");
   });
 
   test("journalFileContent fills the template's date and ID", () => {
-    expect(journalFileContent(d, DEFAULT_JOURNAL_TEMPLATE, "u-1")).toBe(":PROPERTIES:\n:ID:       u-1\n:END:\n#+title: 2024-03-05\n\n");
+    expect(journalFileContent(d, DEFAULT_JOURNAL_TEMPLATE, "u-1")).toBe('# -*- org-download-image-dir: "../../attachments/images/" -*-\n:PROPERTIES:\n:ID:       u-1\n:END:\n#+title: 2024-03-05\n\n');
     expect(journalFileContent(d, ":ID: {{date}}\n#+filetags: :journal:\n", "u-1")).toBe(":ID: 2024-03-05\n#+filetags: :journal:\n");
     expect(journalFileContent(d, "* {{ DATE }} {{date}}\n", "x")).toBe("* 2024-03-05 2024-03-05\n");
   });
 
-  test("the base flavour has only TODO and DONE, the UUID journal header and org-roam links", () => {
+  test("the flavour has only TODO and DONE, the dailies template with the file-local image dir, slug-timestamp notes and id links", () => {
     expect([FLAVOUR.todoKeywords, FLAVOUR.doneKeywords]).toEqual([["TODO"], ["DONE"]]);
     expect(FLAVOUR.journalTemplate).toBe(DEFAULT_JOURNAL_TEMPLATE);
+    expect(FLAVOUR.journalTemplate).toContain('org-download-image-dir: "../../attachments/images/"');
     expect(FLAVOUR.links).toBe("id");
+    expect(FLAVOUR.noteFolder).toBe("roam");
+    expect(FLAVOUR.noteName("Emperor of All Maladies", new Date(2026, 9, 30, 9, 15))).toBe("emperor-of-all-maladies-20261030091500");
+    expect(FLAVOUR.captureHeading).toBe("Tasks");
+    expect(FLAVOUR.agendaFiles).toEqual(["roam/todo.org"]);
+    expect(FLAVOUR.logDone).toBe("note");
+    expect(FLAVOUR.defaultFoldLevel).toBe("expandall");
   });
 
   test("journalEntries keeps dated files under the folder, newest first", () => {
@@ -173,9 +180,18 @@ describe("new notes", () => {
     expect(freeNotePath("", "Other", (p) => taken.has(p))).toBe("Other.org");
   });
 
-  test("noteFileContent uses the UUID as ID and the title as #+title", () => {
-    expect(noteFileContent(" My Note ", "0b6e1c3a-1f2d-4c5e-9a8b-7c6d5e4f3a2b"))
-      .toBe(":PROPERTIES:\n:ID:       0b6e1c3a-1f2d-4c5e-9a8b-7c6d5e4f3a2b\n:END:\n#+title: My Note\n\n");
+  test("noteFileContent writes the file-local image dir, the UUID as ID and the title as #+title", () => {
+    expect(noteFileContent(" My Note ", "0b6e1c3a-1f2d-4c5e-9a8b-7c6d5e4f3a2b", "../attachments/images/"))
+      .toBe('# -*- org-download-image-dir: "../attachments/images/" -*-\n:PROPERTIES:\n:ID:       0b6e1c3a-1f2d-4c5e-9a8b-7c6d5e4f3a2b\n:END:\n#+title: My Note\n\n');
+    expect(noteFileContent(" My Note ", "u-1")).toBe(":PROPERTIES:\n:ID:       u-1\n:END:\n#+title: My Note\n\n");
+  });
+
+  test("stampedNotePath names the note slug-timestamp in the folder, numbering when taken", () => {
+    const d = new Date(2026, 9, 30, 9, 15, 0);
+    expect(stampedNotePath("roam", "Emperor of All Maladies", d)).toBe("roam/emperor-of-all-maladies-20261030091500.org");
+    expect(stampedNotePath("", "A/B: c", d)).toBe("a-b-c-20261030091500.org");
+    const taken = new Set(["roam/idea-20261030091500.org"]);
+    expect(stampedNotePath("roam", "Idea", d, (p) => taken.has(p))).toBe("roam/idea-20261030091500 2.org");
   });
 });
 
@@ -221,10 +237,13 @@ describe("capture", () => {
     expect(parseDateField("2026-02")).toBeNull();
   });
 
-  test("appendEntry starts the entry on its own line at the end", () => {
-    expect(appendEntry("", "* TODO a\n")).toEqual({ from: 0, insert: "* TODO a\n" });
-    expect(appendEntry("#+title: Inbox\n", "* TODO a\n")).toEqual({ from: 15, insert: "* TODO a\n" });
-    expect(appendEntry("* TODO x", "* TODO a\n")).toEqual({ from: 8, insert: "\n* TODO a\n" });
+  test("appendEntry starts the entry on its own line at the end of the capture heading", () => {
+    expect(appendEntry("", "Tasks", "* TODO a\n")).toEqual({ from: 0, insert: "* Tasks\n\n* TODO a\n" });
+    expect(appendEntry("#+title: Inbox\n", "Tasks", "* TODO a\n")).toEqual({ from: 15, insert: "* Tasks\n\n* TODO a\n" });
+    expect(appendEntry("* Tasks\n\n* TODO x\n", "Tasks", "* TODO a\n")).toEqual({ from: 9, insert: "* TODO a\n" });
+    expect(appendEntry("* Tasks\n* TODO x\n* Next\nbody\n", "Tasks", "* TODO a\n")).toEqual({ from: 8, insert: "* TODO a\n" });
+    expect(appendEntry("* Tasks\nTODO old\n\n* Next\n", "Tasks", "* TODO a\n")).toEqual({ from: 18, insert: "* TODO a\n" });
+    expect(appendEntry("* TODO x", "Tasks", "* TODO a\n")).toEqual({ from: 8, insert: "\n* Tasks\n\n* TODO a\n" });
   });
 
   test("sharedCaptureText puts the title or first line first and the URL as a link", () => {
@@ -242,9 +261,10 @@ function inBarOrder(ids: string[]): string[] {
   return BUTTONS.map((b) => b.id as string).filter((id) => ids.includes(id));
 }
 
-/** what an upgrade from before version 9 gives: the list in the old bar order, then the table button (version 10) */
+/** what an upgrade from before version 9 gives: the list in the old bar order, then table (v10), journal, capture and attach (v11) */
 function upgraded(ids: string[]): string[] {
-  return [...inBarOrder(ids.filter((id) => id !== "table")), "table"];
+  const base = [...inBarOrder(ids.filter((id) => id !== "table")), "table"];
+  return [...base, ...["journal", "capture", "attach"].filter((id) => !base.includes(id))];
 }
 
 describe("settings", () => {
@@ -253,7 +273,7 @@ describe("settings", () => {
     expect(s.journalFolder).toBe("days");
     s.shortcutBarButtons.push("X");
     expect(DEFAULT_SETTINGS.shortcutBarButtons).not.toContain("X");
-    expect(mergeSettings(null).shortcutBarVersion).toBe(10);
+    expect(mergeSettings(null).shortcutBarVersion).toBe(11);
     expect(mergeSettings({ journalFolder: "days" }).shortcutBarVersion).toBe(1);
   });
 
@@ -263,12 +283,12 @@ describe("settings", () => {
     for (const key of ["headingDragHandles", "todoKeywords", "hideStars", "backlinks", "journalTemplate"]) expect(key in s, key).toBe(false);
     expect(s.captureFile).toBe("in.org");
     expect(Object.keys(DEFAULT_SETTINGS).sort()).toEqual(
-      ["captureFile", "journalFolder", "shortcutBarButtons", "shortcutBarVersion", "shortcutCustomIcons", "showShortcutBar"]);
+      ["attachmentFolder", "captureFile", "journalFolder", "shortcutBarButtons", "shortcutBarVersion", "shortcutCustomIcons", "showShortcutBar"]);
   });
 
   test("migrateShortcutButtons enables undo/redo/visibility once and drops stars", () => {
     expect(migrateShortcutButtons(["stars", "todo"], 1).buttons).toEqual(upgraded(["undo", "redo", "visibility", "todo", "wiki-link", "heading-id", "new-heading", "src-block", "quote-block", "zoom", "node-find"]));
-    expect(migrateShortcutButtons(["todo"], 10)).toEqual({ buttons: ["todo"], changed: false });
+    expect(migrateShortcutButtons(["todo"], 11)).toEqual({ buttons: ["todo"], changed: false });
   });
 
   test("migrateShortcutButtons replaces id-link with wiki-link in place", () => {
@@ -285,7 +305,7 @@ describe("settings", () => {
     expect(migrateShortcutButtons(["undo", "todo"], 5)).toEqual({ buttons: upgraded(["undo", "todo", "new-heading", "src-block", "quote-block", "zoom", "node-find"]), changed: true });
     expect(migrateShortcutButtons(["new-heading", "undo"], 5).buttons).toEqual(upgraded(["new-heading", "undo", "src-block", "quote-block", "zoom", "node-find"]));
     // turned off after the upgrade, it stays off
-    expect(migrateShortcutButtons(["undo"], 10)).toEqual({ buttons: ["undo"], changed: false });
+    expect(migrateShortcutButtons(["undo"], 11)).toEqual({ buttons: ["undo"], changed: false });
   });
 
   test("migrateShortcutButtons adds the source and quote block buttons once", () => {
@@ -299,16 +319,22 @@ describe("settings", () => {
   });
 
   test("migrateShortcutButtons puts a saved list in the old bar order once, then keeps the user's order", () => {
-    expect(migrateShortcutButtons(["zoom", "undo", "stars", "todo"], 8)).toEqual({ buttons: ["undo", "zoom", "todo", "table"], changed: true });
-    expect(migrateShortcutButtons(["zoom", "undo", "todo"], 9)).toEqual({ buttons: ["zoom", "undo", "todo", "table"], changed: true });
-    expect(migrateShortcutButtons(["zoom", "undo", "todo"], 10)).toEqual({ buttons: ["zoom", "undo", "todo"], changed: false });
+    expect(migrateShortcutButtons(["zoom", "undo", "stars", "todo"], 8)).toEqual({ buttons: ["undo", "zoom", "todo", "table", "journal", "capture", "attach"], changed: true });
+    expect(migrateShortcutButtons(["zoom", "undo", "todo"], 9)).toEqual({ buttons: ["zoom", "undo", "todo", "table", "journal", "capture", "attach"], changed: true });
+    expect(migrateShortcutButtons(["zoom", "undo", "todo"], 11)).toEqual({ buttons: ["zoom", "undo", "todo"], changed: false });
   });
 
   test("migrateShortcutButtons adds the table button once, at the end of the user's bar", () => {
-    expect(migrateShortcutButtons(["todo", "undo"], 9)).toEqual({ buttons: ["todo", "undo", "table"], changed: true });
-    expect(migrateShortcutButtons(["table", "undo"], 9).buttons).toEqual(["table", "undo"]);
+    expect(migrateShortcutButtons(["todo", "undo"], 9)).toEqual({ buttons: ["todo", "undo", "table", "journal", "capture", "attach"], changed: true });
+    expect(migrateShortcutButtons(["table", "undo"], 9).buttons).toEqual(["table", "undo", "journal", "capture", "attach"]);
+  });
+
+  test("migrateShortcutButtons adds journal, capture and attach once", () => {
+    expect(migrateShortcutButtons(["todo"], 10)).toEqual({ buttons: ["todo", "journal", "capture", "attach"], changed: true });
+    expect(migrateShortcutButtons(["journal", "todo"], 10).buttons).toEqual(["journal", "todo", "capture", "attach"]);
+    expect(migrateShortcutButtons(["journal", "capture", "attach", "todo"], 11)).toEqual({ buttons: ["journal", "capture", "attach", "todo"], changed: false });
     // turned off after the upgrade, it stays off
-    expect(migrateShortcutButtons(["undo"], 10)).toEqual({ buttons: ["undo"], changed: false });
+    expect(migrateShortcutButtons(["undo"], 11)).toEqual({ buttons: ["undo"], changed: false });
   });
 
   test("bar buttons follow the saved order and ignore unknown and repeated ids", () => {
@@ -319,10 +345,10 @@ describe("settings", () => {
     expect(barButtons(["todo", "stars", "undo", "todo"]).map((b) => b.id)).toEqual(["todo", "undo"]);
   });
 
-  test("a fresh bar has the editing buttons on and the journal and note buttons off", () => {
+  test("a fresh bar has the editing buttons plus journal, capture and attach on", () => {
     expect(DEFAULT_SETTINGS.shortcutBarButtons).toEqual([
       "undo", "redo", "visibility", "zoom", "new-heading", "demote", "promote", "todo", "schedule", "deadline", "checkbox",
-      "src-block", "quote-block", "table", "wiki-link", "node-find", "heading-id",
+      "src-block", "quote-block", "table", "wiki-link", "node-find", "heading-id", "journal", "capture", "attach",
     ]);
   });
 

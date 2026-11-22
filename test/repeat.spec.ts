@@ -1,13 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { cycleTaskState, toggleKeyword } from "../src/org/edit";
-import { addRepeat, nextRepeat, occursOn, parseStamp } from "../src/org/repeat";
+import { addRepeat, nextRepeat, occursOn, parseStamp, type TaskLog } from "../src/org/repeat";
 import { parseTasks, toggleTaskInText } from "../src/org/tasks";
 
 const kw = { todo: ["TODO", "WAITING"], done: ["DONE", "CANCELLED"] };
 // Thu 29 Oct 2026, 09:12
 const now = new Date(2026, 9, 29, 9, 12);
-const log = { now, logDone: true };
+const log: TaskLog = { now, logDone: true };
 
 function cycle(doc: string, line = 0, l = log) {
   const s = EditorState.create({ doc, selection: EditorSelection.cursor(EditorState.create({ doc }).doc.line(line + 1).to) });
@@ -25,6 +25,19 @@ describe("CLOSED and repeating tasks", () => {
     // without logDone, DONE is only the keyword, but leaving it still removes CLOSED
     expect(cycle("* TODO Pay\nbody", 0, { now, logDone: false }).doc.toString()).toBe("* DONE Pay\nbody");
     expect(cycle("* DONE Pay\nCLOSED: [2026-10-29 Thu 09:12]", 0, { now, logDone: false }).doc.toString()).toBe("* Pay");
+  });
+
+  test("logDone 'note' logs a CLOSING NOTE in a LOGBOOK drawer, and reopening keeps it", () => {
+    expect(cycle("* TODO Pay\nbody", 0, { now, logDone: "note" }).doc.toString()).toBe(
+      "* DONE Pay\nCLOSED: [2026-10-29 Thu 09:12]\n:LOGBOOK:\n- CLOSING NOTE [2026-10-29 Thu 09:12]\n:END:\nbody");
+    expect(cycle("* TODO Pay\nSCHEDULED: <2026-10-30 Fri>\nbody", 0, { now, logDone: "note" }).doc.toString()).toBe(
+      "* DONE Pay\nCLOSED: [2026-10-29 Thu 09:12] SCHEDULED: <2026-10-30 Fri>\n:LOGBOOK:\n- CLOSING NOTE [2026-10-29 Thu 09:12]\n:END:\nbody");
+    // an existing LOGBOOK after the planning line gets the note at its top
+    expect(cycle("* TODO Pay\nSCHEDULED: <2026-10-30 Fri>\n:LOGBOOK:\n- old note\n:END:\nbody", 0, { now, logDone: "note" }).doc.toString()).toBe(
+      "* DONE Pay\nCLOSED: [2026-10-29 Thu 09:12] SCHEDULED: <2026-10-30 Fri>\n:LOGBOOK:\n- CLOSING NOTE [2026-10-29 Thu 09:12]\n- old note\n:END:\nbody");
+    // reopening removes only the CLOSED:, the logbook entry stays as Emacs keeps it
+    expect(cycle("* DONE Pay\nCLOSED: [2026-10-29 Thu 09:12]\n:LOGBOOK:\n- CLOSING NOTE [2026-10-29 Thu 09:12]\n:END:\nbody", 0, { now, logDone: "note" }).doc.toString())
+      .toBe("* Pay\n:LOGBOOK:\n- CLOSING NOTE [2026-10-29 Thu 09:12]\n:END:\nbody");
   });
 
   test("a heading without a planning line gets one for CLOSED, and the cursor stays on the heading", () => {

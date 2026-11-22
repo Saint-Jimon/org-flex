@@ -210,10 +210,12 @@
   text-decoration: none;
 }
 .org-flex-view .org-image {
-  max-width: 100%;
+  /* LP-3: a thumbnail a quarter of the editor's width, as org-image-actual-width '(0.25); tap opens the file */
+  max-width: 25%;
   display: block;
   margin: var(--size-4-1) 0;
   border-radius: var(--radius-s);
+  cursor: pointer;
 }
 .org-flex-view .org-audio-player {
   display: inline-flex;

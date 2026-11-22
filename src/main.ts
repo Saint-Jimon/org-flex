@@ -3,9 +3,9 @@
 import { Transaction } from "@codemirror/state";
 import { FileView, getIcon, Notice, Plugin, TAbstractFile, TFile, WorkspaceLeaf } from "obsidian";
 import { ButtonDef, buttonIconName, CORE_BUTTONS, mergeSettings, migrateShortcutButtons, OrgFlexSettings, BAR_VERSION } from "./settings";
-import { Keywords, classifyLink, resolveRelative } from "./org/syntax";
+import { Keywords, classifyLink, relativeFolderPath, resolveRelative } from "./org/syntax";
 import { LinkScheme, readNote, searchOffset, VaultIndex } from "./org/vault-index";
-import { freeNotePath, noteFileContent, noteFileName, notePath } from "./org/new-note";
+import { noteFileContent, notePath, stampedNotePath } from "./org/new-note";
 import { DenoteFiles, denoteFrontMatter, denoteTabTitle } from "./org/denote";
 import { OrgFlexView, VIEW_TYPE } from "./view";
 import { FLAVOUR } from "./flavour";
@@ -415,7 +415,9 @@ export default class OrgFlexPlugin extends Plugin {
 
   /**
    * NOTE-3, NOTE-5, DEN-5: a new note's path in `folder` and its contents:
-   * `<title>.org` with a new `:ID:` (IDX-3), or with Denote `ID--title.org` and Denote's front matter.
+   * `<slug>-<YYYYMMDDHHMMSS>.org` (the flavour's `noteName`) with the file-local
+   * image-dir line, a new `:ID:` (IDX-3) and the title as `#+title`, or with
+   * Denote `ID--title.org` and Denote's front matter.
    */
   newNote(folder: string, title: string): { path: string; content: string; target: string } {
     if (this.scheme() === "denote") {
@@ -424,16 +426,18 @@ export default class OrgFlexPlugin extends Plugin {
       return { path: notePath(folder, title, id), content: denoteFrontMatter(title, now, [], id), target: `denote:${id}` };
     }
     const id = this.newOrgId();
-    return { path: notePath(folder, title), content: noteFileContent(title, id), target: `id:${id}` };
+    const path = stampedNotePath(folder, title, new Date());
+    const imageDir = relativeFolderPath(path, this.settings.attachmentFolder);
+    return { path, content: noteFileContent(title, id, imageDir), target: `id:${id}` };
   }
 
-  /** LP-10, FIND-3: a note at the vault root; the link target now, the file once written (null if it failed). */
+  /** LP-10, FIND-3: a note in the flavour's note folder; the link target now, the file once written (null if it failed). */
   createRootNote(raw: string): { target: string; file: Promise<TFile | null> } {
     const title = raw.trim();
-    const note = this.newNote("", title);
-    // the title as file name may be taken; a Denote name has a new identifier, so it can't be
+    const note = this.newNote(FLAVOUR.noteFolder, title);
+    // the slug-timestamp name may be taken; a Denote name has a new identifier, so it can't be
     const { path, content } = this.scheme() === "denote" ? note : {
-      path: freeNotePath("", noteFileName(title), (p) => this.pendingNotes.has(p) || this.app.vault.getAbstractFileByPath(p) !== null),
+      path: stampedNotePath(FLAVOUR.noteFolder, title, new Date(), (p) => this.pendingNotes.has(p) || this.app.vault.getAbstractFileByPath(p) !== null),
       content: note.content,
     };
     this.pendingNotes.add(path);
