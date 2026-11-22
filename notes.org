@@ -1,0 +1,7 @@
+# -*- org-download-image-dir: "../attachments/images/" -*-
+:PROPERTIES:
+:ID:       42100b00-a270-48a5-8b50-1c94eaab39f1
+:END:
+#+title: EmperorofAllMaladies
+#+filetags: :cancer:bio-informatcs:books:
+Something leads to rapid cell division, eg inflamation, leading to a lot of possible moments for other mutations needed for cancer like ability to resist drug, not die and infeltrate other organs.
