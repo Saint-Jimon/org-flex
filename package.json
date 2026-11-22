@@ -1,6 +1,6 @@
 {
   "name": "org-flex",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Org mode editing for Obsidian, built for desktop and phone.",
   "main": "main.js",
   "type": "module",

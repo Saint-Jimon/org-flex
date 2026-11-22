@@ -1,7 +1,7 @@
 {
   "id": "org-flex",
   "name": "Org Flex",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "minAppVersion": "1.5.7",
   "description": "Org mode files with live preview, folding, checklists, capture, a journal and backlinks, made for the phone as much as the desktop.",
   "author": "Harshad Shirwadkar",
