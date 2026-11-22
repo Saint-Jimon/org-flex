@@ -1,0 +1,29 @@
+# -*- org-download-image-dir: "../attachments/images/" -*-
+
+
+* Tasks
+
+
+
+TODO easycontrol slaapkamer bestellen
+
+TODO blazer slaapkamer ophangen
+
+TODO opvullen schakelaars [#C]
+
+TODO deuren schilderen
+TODO
+TODO
+TODO
+TODO
+* DONE stoel schilderen 
+SCHEDULED: <2026-11-16 Mon> CLOSED: [2026-11-16 Mon 13:27]
+:LOGBOOK:
+- CLOSING NOTE [2026-11-16 Mon 13:27]
+:END:
+* DONE stoel vernissen 
+SCHEDULED: <2026-11-19 Thu> CLOSED: [2026-11-19 Thu 13:14]
+:LOGBOOK:
+- CLOSING NOTE [2026-11-19 Thu 13:14]
+:END:
+
